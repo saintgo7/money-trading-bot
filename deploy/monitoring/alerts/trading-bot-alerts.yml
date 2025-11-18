@@ -1,0 +1,145 @@
+groups:
+  - name: trading_bot_alerts
+    interval: 30s
+    rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} errors/sec for {{ $labels.instance }}"
+
+      # Service down
+      - alert: ServiceDown
+        expr: up{job=~"backend|celery"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.instance }} has been down for more than 2 minutes"
+
+      # High response time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time"
+          description: "95th percentile response time is {{ $value }}s"
+
+      # Database connection issues
+      - alert: DatabaseConnectionPoolExhausted
+        expr: postgres_connections_active / postgres_connections_max > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Connection pool usage is at {{ $value | humanizePercentage }}"
+
+      # Redis memory usage
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis is using {{ $value | humanizePercentage }} of available memory"
+
+      # Trading bot failures
+      - alert: TradingBotConsecutiveFailures
+        expr: trading_bot_consecutive_failures > 5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Trading bot {{ $labels.bot_name }} has consecutive failures"
+          description: "Bot has failed {{ $value }} times in a row"
+
+      # Unusual trading volume
+      - alert: UnusualTradingVolume
+        expr: |
+          abs(rate(trading_volume_total[1h]) - avg_over_time(rate(trading_volume_total[1h])[1d:1h]))
+          / avg_over_time(rate(trading_volume_total[1h])[1d:1h]) > 2
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unusual trading volume detected"
+          description: "Trading volume is {{ $value | humanizePercentage }} different from normal"
+
+      # Large position loss
+      - alert: LargePositionLoss
+        expr: trading_bot_unrealized_pnl_percent < -10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Large unrealized loss on {{ $labels.bot_name }}"
+          description: "Bot has {{ $value }}% unrealized loss"
+
+      # API rate limit approaching
+      - alert: APIRateLimitApproaching
+        expr: exchange_api_rate_limit_remaining / exchange_api_rate_limit_total < 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API rate limit approaching for {{ $labels.exchange }}"
+          description: "Only {{ $value | humanizePercentage }} of rate limit remaining"
+
+      # Disk space low
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space low on {{ $labels.instance }}"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}%"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      # Celery queue backlog
+      - alert: CeleryQueueBacklog
+        expr: celery_queue_length > 1000
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Large Celery queue backlog"
+          description: "Queue {{ $labels.queue }} has {{ $value }} pending tasks"
+
+      # Model prediction errors
+      - alert: HighModelPredictionErrors
+        expr: rate(ai_model_prediction_errors_total[10m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High AI model prediction error rate"
+          description: "Model {{ $labels.model_name }} error rate: {{ $value }} errors/sec"
