@@ -43,6 +43,16 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str
     CELERY_RESULT_BACKEND: str
 
+    # Stripe Payment
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_PUBLISHABLE_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+
+    # PayPal (optional)
+    PAYPAL_CLIENT_ID: str = ""
+    PAYPAL_CLIENT_SECRET: str = ""
+    PAYPAL_MODE: str = "sandbox"  # sandbox or live
+
     class Config:
         env_file = ".env"
         case_sensitive = True
